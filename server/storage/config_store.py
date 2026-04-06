@@ -5,7 +5,8 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 
 DEFAULT_CONFIG = {
     "kb_url": "",
-    "kb_content": "",
+    "kb_scraped_at": None,
+    "kb_pages_scraped": 0,
     "system_prompt": "You are a helpful customer service assistant for Atome Card. Be friendly, accurate, and concise.",
     "guidelines": [
         "Always greet the customer warmly and address them by name if provided.",
@@ -38,3 +39,11 @@ def write_config(data: dict) -> None:
     with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     tmp_path.replace(config_path)
+
+
+def update_kb_meta(url: str, scraped_at: str, pages_scraped: int) -> None:
+    data = read_config()
+    data["kb_url"] = url
+    data["kb_scraped_at"] = scraped_at
+    data["kb_pages_scraped"] = pages_scraped
+    write_config(data)

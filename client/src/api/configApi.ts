@@ -18,10 +18,10 @@ export async function updateConfig(config: BotConfig): Promise<BotConfig> {
   return res.json();
 }
 
-export async function fetchKbContent(
+export async function scrapeKb(
   url: string
-): Promise<{ content: string; article_count: number }> {
-  const res = await fetch(`${BASE}/api/config/fetch-kb`, {
+): Promise<{ pages_scraped: number; scraped_at: string }> {
+  const res = await fetch(`${BASE}/api/scrape`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url }),
@@ -32,4 +32,19 @@ export async function fetchKbContent(
     throw new Error(detail);
   }
   return res.json();
+}
+
+export async function getKb(): Promise<{ content: string }> {
+  const res = await fetch(`${BASE}/api/kb`);
+  if (!res.ok) throw new Error(`Failed to fetch KB content: ${res.status}`);
+  return res.json();
+}
+
+export async function saveKb(content: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/kb`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content }),
+  });
+  if (!res.ok) throw new Error(`Failed to save KB content: ${res.status}`);
 }

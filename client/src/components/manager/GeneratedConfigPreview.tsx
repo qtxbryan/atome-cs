@@ -68,14 +68,12 @@ export default function GeneratedConfigPreview({ config, onChange }: Props) {
         </div>
       </div>
 
-      {config.kb_content && (
+      {config.kb_url && (
         <div className="space-y-1.5">
           <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-            Knowledge Base Content
+            Knowledge Base URL
           </p>
-          <pre className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-zinc-300 text-xs font-mono whitespace-pre-wrap leading-relaxed max-h-36 overflow-y-auto">
-            {config.kb_content}
-          </pre>
+          <p className="text-zinc-300 text-sm break-all">{config.kb_url}</p>
         </div>
       )}
     </div>

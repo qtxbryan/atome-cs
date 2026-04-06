@@ -34,7 +34,8 @@ class BotConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     kb_url: str = ""
-    kb_content: str = ""
+    kb_scraped_at: str | None = None
+    kb_pages_scraped: int = 0
     system_prompt: str = ""
     guidelines: list[str] = []
     tools_enabled: list[str] = ["getCardStatus", "getTransactionStatus"]
@@ -62,10 +63,18 @@ class MetaAgentRequest(BaseModel):
     current_config: BotConfig
 
 
-class FetchKbRequest(BaseModel):
+class ScrapeRequest(BaseModel):
     url: str
 
 
-class FetchKbResponse(BaseModel):
+class ScrapeResponse(BaseModel):
+    pages_scraped: int
+    scraped_at: str
+
+
+class KbContentResponse(BaseModel):
     content: str
-    article_count: int
+
+
+class KbSaveRequest(BaseModel):
+    content: str

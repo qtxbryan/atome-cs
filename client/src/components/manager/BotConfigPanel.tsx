@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useBotConfig } from "@/context/BotConfigContext";
-import { fetchKbContent } from "@/api/configApi";
+import { scrapeKb, getKb, saveKb } from "@/api/configApi";
 import type { BotConfig } from "@/types/BotConfigTypes";
 import GuidelinesEditor from "./GuidelinesEditor";
 
-function buildPromptPreview(config: BotConfig): string {
+function buildPromptPreview(config: BotConfig, kbContent: string): string {
   const parts: string[] = [];
 
   const base = config.system_prompt.trim();
@@ -19,22 +19,39 @@ function buildPromptPreview(config: BotConfig): string {
     parts.push(`## Guidelines\n${numbered}`);
   }
 
-  if (config.kb_content.trim()) {
-    parts.push(`## Knowledge Base\n${config.kb_content.trim()}`);
+  if (kbContent.trim()) {
+    parts.push(`## Knowledge Base\n${kbContent.trim()}`);
   }
 
   return parts.join("\n\n");
+}
+
+function formatScrapedAt(iso: string | null): string {
+  if (!iso) return "Never";
+  return new Date(iso).toLocaleString();
 }
 
 export default function BotConfigPanel() {
   const { config, loading, error, saveConfig } = useBotConfig();
   const [localConfig, setLocalConfig] = useState<BotConfig | null>(null);
   const [saving, setSaving] = useState(false);
-  const [fetching, setFetching] = useState(false);
+
+  // KB content lives in its own state — loaded from /api/kb, saved to /api/kb
+  const [kbContent, setKbContent] = useState("");
+  const [kbLoading, setKbLoading] = useState(true);
+  const [scraping, setScraping] = useState(false);
+  const [savingKb, setSavingKb] = useState(false);
 
   useEffect(() => {
     if (config) setLocalConfig({ ...config });
   }, [config]);
+
+  useEffect(() => {
+    getKb()
+      .then(({ content }) => setKbContent(content))
+      .catch(() => setKbContent(""))
+      .finally(() => setKbLoading(false));
+  }, []);
 
   if (loading) {
     return (
@@ -56,20 +73,42 @@ export default function BotConfigPanel() {
     );
   }
 
-  async function handleFetchKb() {
+  async function handleScrape() {
     if (!localConfig?.kb_url.trim()) {
       toast.error("Enter a knowledge base URL first.");
       return;
     }
-    setFetching(true);
+    setScraping(true);
     try {
-      const { content, article_count } = await fetchKbContent(localConfig.kb_url.trim());
-      setLocalConfig({ ...localConfig, kb_content: content });
-      toast.success(`Fetched ${article_count} article${article_count !== 1 ? "s" : ""} from the knowledge base.`);
+      const { pages_scraped, scraped_at } = await scrapeKb(localConfig.kb_url.trim());
+      // Refresh kb content from the file that was just written
+      const { content } = await getKb();
+      setKbContent(content);
+      // Update local config to reflect new meta
+      setLocalConfig((prev) =>
+        prev
+          ? { ...prev, kb_scraped_at: scraped_at, kb_pages_scraped: pages_scraped }
+          : prev
+      );
+      toast.success(
+        `Scraped ${pages_scraped} article${pages_scraped !== 1 ? "s" : ""} from the knowledge base.`
+      );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to fetch knowledge base.");
+      toast.error(err instanceof Error ? err.message : "Failed to scrape knowledge base.");
     } finally {
-      setFetching(false);
+      setScraping(false);
+    }
+  }
+
+  async function handleSaveKb() {
+    setSavingKb(true);
+    try {
+      await saveKb(kbContent);
+      toast.success("Knowledge base content saved.");
+    } catch {
+      toast.error("Failed to save knowledge base content.");
+    } finally {
+      setSavingKb(false);
     }
   }
 
@@ -91,7 +130,8 @@ export default function BotConfigPanel() {
     <div className="max-w-3xl mx-auto p-6 space-y-8">
       <h2 className="text-xl font-bold text-white">Bot Configuration</h2>
 
-      <div className="space-y-2">
+      {/* Knowledge Base — Scrape */}
+      <div className="space-y-3">
         <label className="block text-xs font-medium text-zinc-400 uppercase tracking-wider">
           Knowledge Base URL
         </label>
@@ -102,56 +142,73 @@ export default function BotConfigPanel() {
             onChange={(e) =>
               setLocalConfig({ ...localConfig, kb_url: e.target.value })
             }
-            placeholder="https://help.atome.ph/hc/en-gb/categories/..."
+            placeholder="https://help.atome.ph/hc/en-gb/..."
             className="flex-1 bg-zinc-800 border border-zinc-700 text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-atome/50 placeholder-zinc-500"
           />
           <button
-            onClick={handleFetchKb}
-            disabled={fetching || !localConfig.kb_url.trim()}
+            onClick={handleScrape}
+            disabled={scraping || !localConfig.kb_url.trim()}
             className="shrink-0 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2"
           >
-            {fetching ? (
+            {scraping ? (
               <>
                 <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Crawling…
+                Scraping…
               </>
             ) : (
-              "Fetch Knowledge Base"
+              "Scrape & Load"
             )}
           </button>
         </div>
-        {fetching && (
+        {scraping && (
           <p className="text-zinc-400 text-xs animate-pulse">
-            Crawling articles — this may take a minute…
+            Fetching articles from Zendesk API — this may take a moment…
           </p>
         )}
-        {!fetching && (
-          <p className="text-zinc-600 text-xs">
-            Zendesk Help Center category/section URL — click Fetch to crawl all articles.
-          </p>
-        )}
+        <p className="text-zinc-600 text-xs">
+          Last scraped: {formatScrapedAt(localConfig.kb_scraped_at)}
+          {localConfig.kb_pages_scraped > 0 &&
+            ` · ${localConfig.kb_pages_scraped} article${localConfig.kb_pages_scraped !== 1 ? "s" : ""}`}
+        </p>
       </div>
 
+      {/* Knowledge Base — Content editor */}
       <div className="space-y-2">
         <label className="block text-xs font-medium text-zinc-400 uppercase tracking-wider">
           Knowledge Base Content
         </label>
-        <textarea
-          value={localConfig.kb_content}
-          onChange={(e) =>
-            setLocalConfig({ ...localConfig, kb_content: e.target.value })
-          }
-          rows={8}
-          placeholder="Paste the knowledge base content here…"
-          className="w-full bg-zinc-800 border border-zinc-700 text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-atome/50 placeholder-zinc-500 resize-y"
-        />
-        {!localConfig.kb_content.trim() && (
-          <p className="text-yellow-600 text-xs">
-            Warning: knowledge base is empty — the bot will rely on general knowledge only.
-          </p>
+        {kbLoading ? (
+          <div className="h-40 bg-zinc-800 rounded-lg animate-pulse" />
+        ) : (
+          <textarea
+            value={kbContent}
+            onChange={(e) => setKbContent(e.target.value)}
+            rows={10}
+            placeholder="Scraped knowledge base content will appear here. You can also paste or edit content manually."
+            className="w-full bg-zinc-800 border border-zinc-700 text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-atome/50 placeholder-zinc-500 resize-y font-mono"
+          />
         )}
+        <div className="flex items-center justify-between">
+          {!kbContent.trim() ? (
+            <p className="text-yellow-600 text-xs">
+              Warning: knowledge base is empty — the bot will rely on general knowledge only.
+            </p>
+          ) : (
+            <p className="text-zinc-600 text-xs">
+              {kbContent.length.toLocaleString()} characters
+            </p>
+          )}
+          <button
+            onClick={handleSaveKb}
+            disabled={savingKb || kbLoading}
+            className="shrink-0 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            {savingKb ? "Saving…" : "Save KB"}
+          </button>
+        </div>
       </div>
 
+      {/* System Prompt */}
       <div className="space-y-2">
         <label className="block text-xs font-medium text-zinc-400 uppercase tracking-wider">
           System Prompt
@@ -167,6 +224,7 @@ export default function BotConfigPanel() {
         />
       </div>
 
+      {/* Guidelines */}
       <div className="space-y-3">
         <label className="block text-xs font-medium text-zinc-400 uppercase tracking-wider">
           Guidelines
@@ -177,12 +235,13 @@ export default function BotConfigPanel() {
         />
       </div>
 
+      {/* System Prompt Preview */}
       <div className="space-y-2">
         <label className="block text-xs font-medium text-zinc-400 uppercase tracking-wider">
           System Prompt Preview
         </label>
         <pre className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-zinc-300 text-xs font-mono whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">
-          {buildPromptPreview(localConfig)}
+          {buildPromptPreview(localConfig, kbContent)}
         </pre>
         <p className="text-zinc-600 text-xs">
           Live preview — reflects what the bot will receive as context.

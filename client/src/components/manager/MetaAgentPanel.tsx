@@ -9,7 +9,8 @@ import GeneratedConfigPreview from "./GeneratedConfigPreview";
 
 const DEFAULT_CONFIG: BotConfig = {
   kb_url: "",
-  kb_content: "",
+  kb_scraped_at: null,
+  kb_pages_scraped: 0,
   system_prompt: "",
   guidelines: [],
   tools_enabled: ["getCardStatus", "getTransactionStatus"],

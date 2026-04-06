@@ -12,7 +12,7 @@ load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import chat, config, meta_agent, mistakes
+from routers import chat, config, kb, meta_agent, mistakes
 
 app = FastAPI(title="Atome Card Support API", version="1.0.0")
 
@@ -26,6 +26,7 @@ app.add_middleware(
 
 app.include_router(chat.router, prefix="/api")
 app.include_router(config.router, prefix="/api")
+app.include_router(kb.router, prefix="/api")
 app.include_router(mistakes.router, prefix="/api")
 app.include_router(meta_agent.router, prefix="/api")
 
