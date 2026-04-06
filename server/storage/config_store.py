@@ -11,7 +11,7 @@ DEFAULT_CONFIG = {
         "Always greet the customer warmly and address them by name if provided.",
         "Ask for an application ID or transaction ID before checking status.",
         "If you cannot find an answer in the knowledge base, say so honestly instead of guessing.",
-        "Keep responses concise — aim for 3-5 sentences unless more detail is explicitly requested.",
+        "Keep responses concise - aim for 3-5 sentences unless more detail is explicitly requested.",
     ],
     "tools_enabled": ["getCardStatus", "getTransactionStatus"],
 }
