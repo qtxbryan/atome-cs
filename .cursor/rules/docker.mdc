@@ -1,0 +1,24 @@
+---
+description: Docker and deployment rules
+globs: Dockerfile, docker-compose.yml
+alwaysApply: false
+---
+
+# Docker Rules
+
+## Structure
+- docker-compose.yml at monorepo root
+- client/Dockerfile for frontend
+- server/Dockerfile for backend
+- .env at monorepo root passed into both containers
+
+## Services
+- frontend: port 5173
+- backend: port 8000
+- Both must have health checks
+
+## Rules
+- Never hardcode secrets in Dockerfiles
+- Use multi-stage builds for smaller images
+- Use .dockerignore in both client/ and server/
+- One command to run everything: docker compose up --build

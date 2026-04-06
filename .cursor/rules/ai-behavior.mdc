@@ -1,0 +1,34 @@
+---
+alwaysApply: true
+---
+
+# AI Behavior Rules
+
+## Code Quality
+
+- Always write clean, readable, production-level code
+- Prefer readability over cleverness
+- No unnecessary abstractions — if it can be done simply, do it simply
+- No over-engineering — this is an assignment, not a distributed system
+- Ask for clarification if requirements are unclear before writing code
+- Do not create files that are not needed
+
+## When Writing Frontend Code
+
+- Always handle loading states and error states in every component
+- Never put fetch calls directly in components, always use src/api/ layer
+- Never use any or unknown TypeScript types without a comment explaining why
+
+## When Writing Backend Code
+
+- Never put business logic in route handlers, always delegate to services/
+- Always use try/except with proper HTTP status codes
+- Always validate with Pydantic before processing
+- Always use async/await for route handlers
+
+## LLM Calls
+
+- No LangChain, no LangGraph, ever
+- All prompts are strings stored in server/prompts/ folder
+- Always validate and parse LLM responses before returning to frontend
+- Always have a fallback if LLM returns unexpected format

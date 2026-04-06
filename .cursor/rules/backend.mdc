@@ -1,0 +1,82 @@
+---
+description: Backend specific rules for server/ directory
+globs: server/**/*.py
+alwaysApply: false
+---
+
+# Backend Rules
+
+## Folder Structure
+server/
+  main.py              # FastAPI app init, CORS, router registration
+  routers/             # Route handlers only, no business logic
+    chat.py            # Customer bot chat endpoint
+    config.py          # Bot config read/write endpoints
+    mistakes.py        # Mistakes CRUD endpoints
+    meta_agent.py      # Manager meta-agent endpoint
+  services/            # Business logic
+    bot_service.py     # Customer bot logic, Gemini calls
+    meta_service.py    # Meta-agent logic, config generation
+    fix_service.py     # Auto-fix logic, guideline rewriting
+    mock_tools.py      # getCardStatus(), getTransactionStatus()
+  storage/             # JSON file read/write only
+    config_store.py
+    mistakes_store.py
+  prompts/             # All prompt strings
+    bot_prompt.py
+    meta_prompt.py
+    fix_prompt.py
+  data/                # JSON data files (gitignored except templates)
+    config.json
+    mistakes.json
+
+## FastAPI Rules
+- Use async def for all route handlers
+- Use Pydantic BaseModel for all request and response bodies
+- Register all routers in main.py with prefix /api
+- CORS must allow http://localhost:5173
+
+## JSON Storage Rules
+- config.json shape:
+  {
+    "kb_url": "",
+    "kb_content": "",
+    "system_prompt": "",
+    "guidelines": [],
+    "tools_enabled": ["getCardStatus", "getTransactionStatus"]
+  }
+- mistakes.json shape:
+  {
+    "open": [],
+    "fixed": [],
+    "archived": []
+  }
+- Each mistake shape:
+  {
+    "id": "uuid",
+    "timestamp": "ISO string",
+    "customer_message": "",
+    "bot_response": "",
+    "complaint_type": "",
+    "comment": "",
+    "status": "open|fixed|archived",
+    "fix_diff": { "before": "", "after": "" }
+  }
+- Always read fresh from file on each request
+- Always write atomically: write to .tmp file then rename
+
+## Mock Tools
+- getCardStatus(application_id) returns randomised status:
+  pending | under_review | approved | rejected
+- getTransactionStatus(transaction_id) returns randomised status:
+  success | failed | processing | refunded
+- Include realistic fields: dates, amounts, merchant names
+- Seed randomisation with the ID so same ID always returns same result
+
+## Gemini Rules
+- Model: gemini-2.0-flash
+- For customer bot: use function calling / tool use API
+- For meta-agent: single prompt, expect JSON response
+- For auto-fix: single prompt, expect JSON with before/after diff
+- Always wrap Gemini calls in try/except
+- Store API key in .env as GEMINI_API_KEY

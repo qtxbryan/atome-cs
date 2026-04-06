@@ -1,0 +1,40 @@
+---
+description: Project overview, tech stack, design system, and component guidelines for Atome Card Support
+alwaysApply: true
+---
+
+# Atome Card Support — Project Overview
+
+A customer service bot management system with two roles: Manager and Customer.
+Single monorepo with client/ (frontend) and server/ (backend).
+
+- Manager configures the bot at route /manager (password: atome2024)
+- Customer interacts with the bot at route /
+
+## Tech Stack
+
+| Layer          | Choice                                             |
+| -------------- | -------------------------------------------------- |
+| Frontend       | React 19 + TypeScript, Vite, Tailwind CSS v4       |
+| Backend        | Python 3.11 + FastAPI, async/await, Pydantic       |
+| LLM            | Gemini API (google-generativeai SDK, direct calls) |
+| Persistence    | JSON files only (config.json, mistakes.json)       |
+| Deployment     | Docker + docker-compose                            |
+| Component libs | shadcn/ui, HeroUI                                  |
+
+## Hard Rules — Never Violate These
+
+- Never use LangChain or LangGraph
+- Never use a database. JSON files only
+- Never use localStorage for critical state
+- All LLM calls go through FastAPI backend, never directly from frontend
+- All API keys live in server/.env only, never in frontend
+- Frontend and backend are decoupled via REST API only
+- No SSR. Pure CSR only
+
+## Repo Structure
+
+- client/ → Vite + React frontend
+- server/ → FastAPI backend
+- docker-compose.yml → at monorepo root
+- .env → at monorepo root, copied into containers at build time

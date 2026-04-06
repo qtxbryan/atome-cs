@@ -1,0 +1,85 @@
+---
+description: Frontend specific rules for client/ directory including file structure, naming conventions, and coding standards
+globs: client/**/*.tsx, client/**/*.ts
+alwaysApply: false
+---
+
+# Frontend Rules
+
+## Folder Layout
+src/
+  main.tsx                    # Entry point
+  App.tsx                     # Root component and routing
+  pages/                      # One file per route
+    CustomerChat.tsx           # Route: /
+    ManagerDashboard.tsx       # Route: /manager
+  components/                 # Feature-specific reusable components
+    ui/                       # Generic stateless UI primitives only
+    generative/               # Generative UI components
+      CardStatusWidget.tsx
+      TransactionStatusWidget.tsx
+  context/                    # React Context providers
+    BotConfigContext.tsx
+    MistakesContext.tsx
+    AuthContext.tsx
+  api/                        # All fetch calls to backend, never inline
+    botApi.ts
+    configApi.ts
+    mistakesApi.ts
+    metaAgentApi.ts
+  hooks/                      # Custom React hooks
+  utils/                      # Pure helper functions, no React imports
+  types/                      # Shared TypeScript types and interfaces
+  assets/                     # Static assets
+
+## Naming Conventions
+- Pages and components: PascalCase (CustomerChat.tsx, ChatBubble.tsx)
+- Hooks: camelCase prefixed with use (useAuth.ts, useChatStream.ts)
+- Utils: camelCase (formatDate.ts, parseGeminiResponse.ts)
+- Types: PascalCase (MistakeTypes.ts, BotConfigTypes.ts)
+- API files: camelCase suffixed with Api (botApi.ts, mistakesApi.ts)
+
+## Folder Rules
+- pages/ — one file per route only, no business logic
+- components/ui/ — only generic context-free primitives, no business logic
+- components/ — feature components that use ui/ primitives and hooks
+- hooks/ — must be prefixed with use
+- utils/ — pure functions only, no React imports ever
+- api/ — all fetch calls live here only, never inline in components
+
+## Routing
+- React Router v6
+- / → CustomerChat.tsx (public)
+- /manager → ManagerDashboard.tsx (password gated)
+- Hardcoded password: "atome2024"
+
+## State Management
+- React Context only. No Redux, no Zustand
+- Three contexts: BotConfigContext, MistakesContext, AuthContext
+- All contexts live in src/context/
+
+## API Layer
+- All fetch calls in src/api/ only, never inline in components
+- Always handle loading and error states
+- Backend base URL from environment variable VITE_API_URL
+
+## TypeScript
+- Never use any or unknown without a comment explaining why
+- All API response shapes must have a defined type in src/types/
+- All props must be typed
+
+## Generative UI
+- Bot responses return either plain text or structured JSON
+- Always check if response is valid JSON first, fall back to plain text
+- CardStatusWidget.tsx renders card application status
+- TransactionStatusWidget.tsx renders transaction details
+
+## Design
+- Atome primary: #F4FF5F
+- Contrast: #000000
+- Background: #FFFFFF, panels: #F9F9F9
+- Border radius: rounded-xl (12px)
+- Use shadcn/ui and HeroUI before raw Tailwind
+- Bot bubbles: black background, white text, left aligned
+- Customer bubbles: #F4FF5F background, black text, right aligned
+- Streaming responses must show typing indicator while streaming
