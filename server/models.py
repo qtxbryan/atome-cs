@@ -60,3 +60,12 @@ class MetaAgentRequest(BaseModel):
     messages: list[dict]
     document_content: str | None = None
     current_config: BotConfig
+
+
+class FetchKbRequest(BaseModel):
+    url: str
+
+
+class FetchKbResponse(BaseModel):
+    content: str
+    article_count: int

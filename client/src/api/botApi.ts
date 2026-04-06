@@ -8,7 +8,9 @@ export async function streamChat(
   history: ChatHistoryItem[],
   onChunk: (text: string) => void,
   onDone: () => void,
-  onError: (msg: string) => void
+  onError: (msg: string) => void,
+  onToolCall?: (name: string) => void,
+  onToolDone?: () => void
 ): Promise<void> {
   const res = await fetch(`${BASE}/api/chat`, {
     method: "POST",
@@ -21,5 +23,5 @@ export async function streamChat(
     return;
   }
 
-  await parseSSEStream(res, onChunk, onDone, onError);
+  await parseSSEStream(res, onChunk, onDone, onError, onToolCall, onToolDone);
 }

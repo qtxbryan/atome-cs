@@ -85,45 +85,83 @@ async def stream_chat(
     messages = _build_messages(message, history, system_prompt)
 
     try:
-        # Phase 1: resolve tool calls (non-streaming) if tools are enabled
-        if active_tool_defs:
-            while True:
-                response = await _get_client().chat.completions.create(
-                    model=MODEL,
-                    messages=messages,
-                    tools=active_tool_defs,
-                )
-                choice = response.choices[0]
+        # Always stream from the first call. If the model decides to call a tool,
+        # we accumulate the tool call arguments from the streaming deltas, execute
+        # the tools, append the results, and loop for the next streaming response.
+        # This means text starts flowing to the client immediately on the first
+        # turn that doesn't need tools, with no blocking pre-flight call.
+        while True:
+            kwargs: dict = {"model": MODEL, "messages": messages, "stream": True}
+            if active_tool_defs:
+                kwargs["tools"] = active_tool_defs
 
-                if choice.finish_reason == "tool_calls":
-                    messages.append(choice.message)
-                    for tc in choice.message.tool_calls:
-                        fn = TOOL_FUNCTIONS.get(tc.function.name)
-                        if fn is None:
-                            result = {"error": f"Unknown tool: {tc.function.name}"}
-                        else:
-                            args = json.loads(tc.function.arguments)
-                            result = fn(**args)
-                        messages.append(
-                            {
-                                "role": "tool",
-                                "tool_call_id": tc.id,
-                                "content": json.dumps(result),
-                            }
-                        )
+            stream = await _get_client().chat.completions.create(**kwargs)
+
+            # Accumulate tool call argument fragments across streaming deltas.
+            # Each tool call is keyed by its index in the delta list.
+            tool_calls_acc: dict[int, dict] = {}
+            finish_reason = None
+
+            async for chunk in stream:
+                choice = chunk.choices[0]
+                if choice.finish_reason:
+                    finish_reason = choice.finish_reason
+                delta = choice.delta
+
+                if delta.content:
+                    yield f"data: {delta.content}\n\n"
+
+                if delta.tool_calls:
+                    for tc_delta in delta.tool_calls:
+                        idx = tc_delta.index
+                        if idx not in tool_calls_acc:
+                            tool_calls_acc[idx] = {"id": "", "name": "", "arguments": ""}
+                        if tc_delta.id:
+                            tool_calls_acc[idx]["id"] = tc_delta.id
+                        if tc_delta.function and tc_delta.function.name:
+                            name = tc_delta.function.name
+                            # Emit tool call event on first name fragment so the
+                            # UI can show the indicator immediately.
+                            if not tool_calls_acc[idx]["name"]:
+                                yield f"data: [TOOL_CALL] {name}\n\n"
+                            tool_calls_acc[idx]["name"] = name
+                        if tc_delta.function and tc_delta.function.arguments:
+                            tool_calls_acc[idx]["arguments"] += tc_delta.function.arguments
+
+            if finish_reason != "tool_calls":
+                break
+
+            # Build the assistant turn with accumulated tool calls and execute them.
+            tool_calls_list = [
+                {
+                    "id": tool_calls_acc[i]["id"],
+                    "type": "function",
+                    "function": {
+                        "name": tool_calls_acc[i]["name"],
+                        "arguments": tool_calls_acc[i]["arguments"],
+                    },
+                }
+                for i in sorted(tool_calls_acc)
+            ]
+            messages.append({"role": "assistant", "tool_calls": tool_calls_list})
+
+            for tc in tool_calls_list:
+                fn = TOOL_FUNCTIONS.get(tc["function"]["name"])
+                if fn is None:
+                    result: dict = {"error": f"Unknown tool: {tc['function']['name']}"}
                 else:
-                    break
+                    args = json.loads(tc["function"]["arguments"])
+                    result = fn(**args)
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tc["id"],
+                        "content": json.dumps(result),
+                    }
+                )
 
-        # Phase 2: stream the final answer
-        stream = await _get_client().chat.completions.create(
-            model=MODEL,
-            messages=messages,
-            stream=True,
-        )
-        async for chunk in stream:
-            delta = chunk.choices[0].delta.content
-            if delta:
-                yield f"data: {delta}\n\n"
+            # All tools resolved — signal the UI to clear the indicator.
+            yield f"data: [TOOL_DONE]\n\n"
 
         yield "data: [DONE]\n\n"
 

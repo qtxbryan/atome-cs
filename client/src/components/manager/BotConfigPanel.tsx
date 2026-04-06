@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useBotConfig } from "@/context/BotConfigContext";
+import { fetchKbContent } from "@/api/configApi";
 import type { BotConfig } from "@/types/BotConfigTypes";
 import GuidelinesEditor from "./GuidelinesEditor";
 
@@ -29,6 +30,7 @@ export default function BotConfigPanel() {
   const { config, loading, error, saveConfig } = useBotConfig();
   const [localConfig, setLocalConfig] = useState<BotConfig | null>(null);
   const [saving, setSaving] = useState(false);
+  const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
     if (config) setLocalConfig({ ...config });
@@ -54,11 +56,29 @@ export default function BotConfigPanel() {
     );
   }
 
+  async function handleFetchKb() {
+    if (!localConfig?.kb_url.trim()) {
+      toast.error("Enter a knowledge base URL first.");
+      return;
+    }
+    setFetching(true);
+    try {
+      const { content, article_count } = await fetchKbContent(localConfig.kb_url.trim());
+      setLocalConfig({ ...localConfig, kb_content: content });
+      toast.success(`Fetched ${article_count} article${article_count !== 1 ? "s" : ""} from the knowledge base.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to fetch knowledge base.");
+    } finally {
+      setFetching(false);
+    }
+  }
+
   async function handleSave() {
     if (!localConfig) return;
     setSaving(true);
     try {
-      await saveConfig(localConfig);
+      const updated = await saveConfig(localConfig);
+      if (updated) setLocalConfig({ ...updated });
       toast.success("Configuration saved!");
     } catch {
       toast.error("Failed to save configuration.");
@@ -75,18 +95,41 @@ export default function BotConfigPanel() {
         <label className="block text-xs font-medium text-zinc-400 uppercase tracking-wider">
           Knowledge Base URL
         </label>
-        <input
-          type="url"
-          value={localConfig.kb_url}
-          onChange={(e) =>
-            setLocalConfig({ ...localConfig, kb_url: e.target.value })
-          }
-          placeholder="https://help.atome.ph/..."
-          className="w-full bg-zinc-800 border border-zinc-700 text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-atome/50 placeholder-zinc-500"
-        />
-        <p className="text-zinc-600 text-xs">
-          Reference only — content is not automatically scraped.
-        </p>
+        <div className="flex gap-2">
+          <input
+            type="url"
+            value={localConfig.kb_url}
+            onChange={(e) =>
+              setLocalConfig({ ...localConfig, kb_url: e.target.value })
+            }
+            placeholder="https://help.atome.ph/hc/en-gb/categories/..."
+            className="flex-1 bg-zinc-800 border border-zinc-700 text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-atome/50 placeholder-zinc-500"
+          />
+          <button
+            onClick={handleFetchKb}
+            disabled={fetching || !localConfig.kb_url.trim()}
+            className="shrink-0 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2"
+          >
+            {fetching ? (
+              <>
+                <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Crawling…
+              </>
+            ) : (
+              "Fetch Knowledge Base"
+            )}
+          </button>
+        </div>
+        {fetching && (
+          <p className="text-zinc-400 text-xs animate-pulse">
+            Crawling articles — this may take a minute…
+          </p>
+        )}
+        {!fetching && (
+          <p className="text-zinc-600 text-xs">
+            Zendesk Help Center category/section URL — click Fetch to crawl all articles.
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">

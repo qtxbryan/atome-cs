@@ -56,7 +56,7 @@ export function useChatStream() {
           setMessages((prev) =>
             prev.map((m) =>
               m.id === botMsgId
-                ? { ...m, content: parsed, isStreaming: false }
+                ? { ...m, content: parsed, isStreaming: false, activeToolCall: undefined }
                 : m
             )
           );
@@ -70,11 +70,26 @@ export function useChatStream() {
                     ...m,
                     content: `Sorry, something went wrong: ${errMsg}`,
                     isStreaming: false,
+                    activeToolCall: undefined,
                   }
                 : m
             )
           );
           setIsStreaming(false);
+        },
+        (toolName) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === botMsgId ? { ...m, activeToolCall: toolName } : m
+            )
+          );
+        },
+        () => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === botMsgId ? { ...m, activeToolCall: undefined } : m
+            )
+          );
         }
       );
     },

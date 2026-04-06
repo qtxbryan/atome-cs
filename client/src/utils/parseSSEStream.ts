@@ -2,7 +2,9 @@ export async function parseSSEStream(
   response: Response,
   onChunk: (text: string) => void,
   onDone: () => void,
-  onError: (msg: string) => void
+  onError: (msg: string) => void,
+  onToolCall?: (name: string) => void,
+  onToolDone?: () => void
 ): Promise<void> {
   if (!response.body) {
     onError("No response body");
@@ -26,7 +28,11 @@ export async function parseSSEStream(
         const trimmed = line.trim();
         if (!trimmed.startsWith("data:")) continue;
 
-        const payload = trimmed.slice(5).trim();
+        // SSE format is "data: <content>" — strip exactly the "data:" prefix
+        // and one optional separator space. Do NOT trim() the rest, because
+        // content chunks may begin with a space (e.g. " world" after "Hello").
+        const rest = trimmed.slice(5);
+        const payload = rest.startsWith(" ") ? rest.slice(1) : rest;
 
         if (payload === "[DONE]") {
           onDone();
@@ -36,6 +42,16 @@ export async function parseSSEStream(
         if (payload.startsWith("[ERROR]")) {
           onError(payload.slice(7).trim());
           return;
+        }
+
+        if (payload.startsWith("[TOOL_CALL] ")) {
+          onToolCall?.(payload.slice(12).trim());
+          continue;
+        }
+
+        if (payload === "[TOOL_DONE]") {
+          onToolDone?.();
+          continue;
         }
 
         if (payload) {

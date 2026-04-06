@@ -22,6 +22,7 @@ export interface ChatMessage {
   role: "user" | "bot";
   content: string | CardStatusData | TransactionStatusData;
   isStreaming?: boolean;
+  activeToolCall?: string;
 }
 
 export interface ChatHistoryItem {

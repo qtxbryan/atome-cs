@@ -6,3 +6,5 @@ openai
 python-multipart==0.0.24
 pypdf==6.9.2
 aiofiles==25.1.0
+playwright
+beautifulsoup4

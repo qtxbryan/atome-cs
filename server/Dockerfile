@@ -1,13 +1,12 @@
-FROM python:3.11-slim AS builder
-
-WORKDIR /install
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt --target=/install/packages
-
 FROM python:3.11-slim
 
 WORKDIR /app
-COPY --from=builder /install/packages /usr/local/lib/python3.11/site-packages
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install Playwright's Chromium browser and its OS dependencies
+RUN playwright install --with-deps chromium
+
 COPY . .
 
 RUN mkdir -p /app/data

@@ -13,7 +13,7 @@ interface BotConfigContextValue {
   loading: boolean;
   error: string | null;
   fetchConfig: () => Promise<void>;
-  saveConfig: (config: BotConfig) => Promise<void>;
+  saveConfig: (config: BotConfig) => Promise<BotConfig>;
 }
 
 const BotConfigContext = createContext<BotConfigContextValue | null>(null);
@@ -36,11 +36,12 @@ export function BotConfigProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function saveConfig(newConfig: BotConfig) {
+  async function saveConfig(newConfig: BotConfig): Promise<BotConfig> {
     setError(null);
     try {
       const updated = await updateConfig(newConfig);
       setConfig(updated);
+      return updated;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save config");
       throw e;
