@@ -27,6 +27,7 @@ export default function CustomerChat() {
   const { messages, isStreaming, sendMessage } = useChatStream();
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const prevMessageCountRef = useRef(0);
 
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -46,9 +47,21 @@ export default function CustomerChat() {
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const isNearBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight < 120;
-    if (isNearBottom) {
+
+    const newMessageAdded = messages.length > prevMessageCountRef.current;
+    prevMessageCountRef.current = messages.length;
+
+    if (newMessageAdded) {
+      // A new user or assistant message was added — always jump to bottom.
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+
+    // Streaming update of an existing message — only scroll if the user is
+    // already near the bottom (generous threshold to account for taller bubbles).
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (distanceFromBottom < 300) {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);

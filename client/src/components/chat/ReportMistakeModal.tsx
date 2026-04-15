@@ -56,8 +56,14 @@ export default function ReportMistakeModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 animate-fadein">
-      <div className="w-full max-w-md bg-zinc-900 rounded-2xl p-6 shadow-2xl border border-zinc-800 mx-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 animate-fadein"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md bg-zinc-900 rounded-2xl p-6 shadow-2xl border border-zinc-800 mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="text-lg font-bold text-white mb-1">Report a Problem</h2>
         <p className="text-zinc-400 text-sm mb-4">
           Help us improve the bot by flagging this response.

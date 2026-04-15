@@ -165,7 +165,8 @@ async def stream_chat(
                 delta = choice.delta
 
                 if delta.content:
-                    yield f"data: {delta.content}\n\n"
+                    # JSON-encode so embedded newlines (\n) survive SSE line parsing
+                    yield f"data: {json.dumps(delta.content)}\n\n"
 
                 if delta.tool_calls:
                     for tc_delta in delta.tool_calls:

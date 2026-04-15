@@ -157,10 +157,17 @@ export function useChatStream() {
               if (payload) setError(payload);
             } else if (currentEvent === "message") {
               if (!payload) continue;
+              // Server JSON-encodes chunks so embedded newlines survive SSE line splitting
+              let chunk: string;
+              try {
+                chunk = JSON.parse(payload) as string;
+              } catch {
+                chunk = payload;
+              }
               setMessages((prev) =>
                 prev.map((m) => {
                   if (m.id === assistantId && typeof m.content === "string") {
-                    return { ...m, content: m.content + payload };
+                    return { ...m, content: m.content + chunk };
                   }
                   return m;
                 })
