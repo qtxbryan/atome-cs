@@ -1,4 +1,5 @@
 import asyncio
+import os
 import sys
 
 # Playwright spawns a subprocess to launch Chromium. On Windows the default
@@ -21,9 +22,12 @@ app = FastAPI(title="Atome Card Support API", version="1.0.0")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost")
+_allowed_origins = [o.strip() for o in _raw_origins.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
