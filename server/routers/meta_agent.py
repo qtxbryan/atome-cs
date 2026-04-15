@@ -1,15 +1,17 @@
 import io
 
-from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi import APIRouter, HTTPException, Request, UploadFile
 from models import BotConfig, MetaAgentRequest
 from services import meta_service
 from storage import config_store
+from limiter import limiter
 
 router = APIRouter()
 
 
 @router.post("/meta-agent")
-async def meta_agent(req: MetaAgentRequest) -> dict:
+@limiter.limit("20/hour")
+async def meta_agent(request: Request, req: MetaAgentRequest) -> dict:
     try:
         result = await meta_service.generate_config(
             req.messages,
