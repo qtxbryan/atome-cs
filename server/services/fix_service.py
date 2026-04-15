@@ -46,7 +46,16 @@ async def generate_fix(mistake_id: str) -> None:
             f"{i}. {g}" for i, g in enumerate(guidelines)
         )
 
+        history_lines = "\n".join(
+            f"{m['role'].upper()}: {m['content']}"
+            for m in mistake.get("conversation_history", [])
+        )
+        history_section = (
+            f"Conversation history:\n{history_lines}\n\n" if history_lines else ""
+        )
+
         prompt_text = (
+            f"{history_section}"
             f"Complaint type: {mistake.get('complaint_type', 'other')}\n"
             f"Customer message: {mistake.get('customer_message', '')}\n"
             f"Bot response: {mistake.get('bot_response', '')}\n"

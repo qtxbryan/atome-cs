@@ -33,7 +33,11 @@ function formatScrapedAt(iso: string | null): string {
 
 export default function BotConfigPanel() {
   const { config, loading, error, saveConfig } = useBotConfig();
-  const [localConfig, setLocalConfig] = useState<BotConfig | null>(null);
+  // Initialize synchronously from context so there's no flash of the error state
+  // on re-mount when config is already loaded (e.g. switching tabs back to "config")
+  const [localConfig, setLocalConfig] = useState<BotConfig | null>(() =>
+    config ? { ...config } : null
+  );
   const [saving, setSaving] = useState(false);
 
   // KB content lives in its own state — loaded from /api/kb, saved to /api/kb
@@ -53,7 +57,9 @@ export default function BotConfigPanel() {
       .finally(() => setKbLoading(false));
   }, []);
 
-  if (loading) {
+  // Show skeleton while loading OR while localConfig hasn't been initialised yet
+  // (one-render gap between context loading and the useEffect copying config)
+  if (loading || (!localConfig && !error)) {
     return (
       <div className="p-6 space-y-4">
         {[...Array(5)].map((_, i) => (

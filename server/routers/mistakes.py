@@ -40,6 +40,7 @@ async def report_mistake(
         comment=req.comment,
         status="pending_review",
         fix_generating=True,
+        conversation_history=req.conversation_history,
     )
     data = mistakes_store.read_mistakes()
     data["pending_review"].append(mistake.model_dump())

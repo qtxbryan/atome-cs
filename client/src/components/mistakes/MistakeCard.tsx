@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import type { Mistake } from "@/types/MistakeTypes";
 import { useMistakes } from "@/context/MistakesContext";
 import { useMistakePolling } from "@/hooks/useMistakePolling";
@@ -21,6 +22,7 @@ export default function MistakeCard({ mistake }: Props) {
   const [editMode, setEditMode] = useState(false);
   const [editedText, setEditedText] = useState("");
   const [isApplying, setIsApplying] = useState(false);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
 
   useMistakePolling(mistake.id, mistake.fix_generating);
 
@@ -87,6 +89,37 @@ export default function MistakeCard({ mistake }: Props) {
               Customer comment
             </p>
             <p className="text-zinc-400 italic text-xs px-3">{mistake.comment}</p>
+          </div>
+        )}
+
+        {mistake.conversation_history.length > 0 && (
+          <div>
+            <button
+              onClick={() => setHistoryExpanded((v) => !v)}
+              className="flex items-center gap-1 text-zinc-500 hover:text-zinc-300 text-xs transition-colors"
+            >
+              {historyExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              Full conversation ({mistake.conversation_history.length} messages)
+            </button>
+            {historyExpanded && (
+              <div className="mt-2 space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                {mistake.conversation_history.map((turn, i) => (
+                  <div
+                    key={i}
+                    className={`rounded-lg px-2.5 py-1.5 text-xs ${
+                      turn.role === "user"
+                        ? "bg-atome/10 text-atome border border-atome/20 ml-4"
+                        : "bg-zinc-800/50 text-zinc-300 border border-zinc-700/50 mr-4"
+                    }`}
+                  >
+                    <span className="font-semibold uppercase text-[9px] tracking-wider opacity-60 block mb-0.5">
+                      {turn.role === "user" ? "Customer" : "Bot"}
+                    </span>
+                    {turn.content}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -4,3 +4,21 @@
   --color-atome: #f4ff5f;
   --color-atome-foreground: #000000;
 }
+
+@keyframes fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideup {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadein {
+  animation: fadein 0.2s ease-out both;
+}
+
+.animate-slideup {
+  animation: slideup 0.2s ease-out both;
+}

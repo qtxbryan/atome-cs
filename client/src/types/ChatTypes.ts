@@ -1,3 +1,5 @@
+export type MessageRole = "user" | "assistant";
+
 export interface CardStatusData {
   type: "card_status";
   application_id: string;
@@ -19,21 +21,28 @@ export interface TransactionStatusData {
 
 export interface ChatMessage {
   id: string;
-  role: "user" | "bot";
+  role: MessageRole;
   content: string | CardStatusData | TransactionStatusData;
+  /** Brief intro text shown above a generative UI widget */
+  textContent?: string;
   isStreaming?: boolean;
+  statusSteps?: string[];
   activeToolCall?: string;
 }
 
-export interface ChatHistoryItem {
-  role: "user" | "bot";
-  content: string;
+export interface ChatRequest {
+  message: string;
+  history: Array<{ role: MessageRole; content: string }>;
 }
 
 export function isCardStatusData(
   content: ChatMessage["content"]
 ): content is CardStatusData {
-  return typeof content === "object" && "type" in content && content.type === "card_status";
+  return (
+    typeof content === "object" &&
+    "type" in content &&
+    content.type === "card_status"
+  );
 }
 
 export function isTransactionStatusData(

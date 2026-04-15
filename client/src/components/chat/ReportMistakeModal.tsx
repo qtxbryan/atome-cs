@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useMistakes } from "@/context/MistakesContext";
-import type { ComplaintType } from "@/types/MistakeTypes";
+import type { ComplaintType, ConversationTurn } from "@/types/MistakeTypes";
 
 interface Props {
   botMessage: string;
-  customerMessage: string;
+  conversationHistory: ConversationTurn[];
   isOpen: boolean;
   onClose: () => void;
   onSubmitted: () => void;
@@ -19,7 +19,7 @@ const COMPLAINT_OPTIONS: { value: ComplaintType; label: string }[] = [
 
 export default function ReportMistakeModal({
   botMessage,
-  customerMessage,
+  conversationHistory,
   isOpen,
   onClose,
   onSubmitted,
@@ -32,16 +32,20 @@ export default function ReportMistakeModal({
 
   if (!isOpen) return null;
 
+  const lastUserMessage =
+    [...conversationHistory].reverse().find((m) => m.role === "user")?.content ?? "";
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
     try {
       await reportMistake({
-        customer_message: customerMessage,
+        customer_message: lastUserMessage,
         bot_response: botMessage,
         complaint_type: complaintType,
         comment,
+        conversation_history: conversationHistory,
       });
       onSubmitted();
     } catch {
@@ -52,7 +56,7 @@ export default function ReportMistakeModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 animate-fadein">
       <div className="w-full max-w-md bg-zinc-900 rounded-2xl p-6 shadow-2xl border border-zinc-800 mx-4">
         <h2 className="text-lg font-bold text-white mb-1">Report a Problem</h2>
         <p className="text-zinc-400 text-sm mb-4">

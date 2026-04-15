@@ -7,17 +7,9 @@ from openai import AsyncOpenAI
 from prompts.bot_prompt import build_system_prompt
 from services.mock_tools import getCardStatus, getTransactionStatus
 
-MODEL = "gpt-5-nano"
+MODEL = os.environ.get("CHAT_MODEL", "gpt-4o-mini")
 
-_client: AsyncOpenAI | None = None
-
-
-def _get_client() -> AsyncOpenAI:
-    global _client
-    if _client is None:
-        _client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
-    return _client
-
+_client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
 TOOL_FUNCTIONS = {
     "getCardStatus": getCardStatus,
@@ -61,7 +53,6 @@ TOOL_DEFINITIONS = [
     },
 ]
 
-
 def _build_messages(
     message: str, history: list[dict], system_prompt: str
 ) -> list[dict]:
@@ -72,6 +63,79 @@ def _build_messages(
     messages.append({"role": "user", "content": message})
     return messages
 
+def _format_tool_result(tool_name: str, result: dict) -> str:
+    """✅ Format tool results in Python — not by prompting the model."""
+    if "error" in result:
+        return f"Sorry, I couldn't retrieve that information: {result['error']}"
+
+    if tool_name == "getCardStatus":
+        lines = [
+            f"Application **{result.get('application_id')}** is **{result.get('status')}**.",
+            f"Applied on: {result.get('applied_date')}.",
+        ]
+        if result.get("estimated_days") is not None:
+            lines.append(f"Estimated {result['estimated_days']} day(s) remaining.")
+        return " ".join(lines)
+
+    if tool_name == "getTransactionStatus":
+        lines = [
+            f"Transaction **{result.get('transaction_id')}** is **{result.get('status')}**.",
+            f"Amount: {result.get('currency')} {result.get('amount'):.2f}",
+            f"Merchant: {result.get('merchant')}",
+            f"Date: {result.get('date')}",
+        ]
+        if result.get("failure_reason"):
+            lines.append(f"Failure reason: {result['failure_reason']}")
+        return " ".join(lines)
+
+    return json.dumps(result)
+
+def _build_tool_calls_list(tool_calls_acc: dict[int, dict]) -> list[dict]:
+    return [
+        {
+            "id": tool_calls_acc[i]["id"],
+            "type": "function",
+            "function": {
+                "name": tool_calls_acc[i]["name"],
+                "arguments": tool_calls_acc[i]["arguments"],
+            },
+        }
+        for i in sorted(tool_calls_acc)
+    ]
+
+def _execute_tool_calls(
+    tool_calls_acc: dict[int, dict], messages: list[dict]
+) -> list[dict]:
+    """Executes tool calls, mutates messages in place, returns raw results for SSE."""
+    tool_calls_list = _build_tool_calls_list(tool_calls_acc)
+    messages.append({"role": "assistant", "tool_calls": tool_calls_list})
+
+    raw_results: list[dict] = []
+    for tc in tool_calls_list:
+        fn = TOOL_FUNCTIONS.get(tc["function"]["name"])
+        if fn is None:
+            result: dict = {"error": f"Unknown tool: {tc['function']['name']}"}
+        else:
+            try:
+                args = json.loads(tc["function"]["arguments"])
+                result = fn(**args)
+            except json.JSONDecodeError as e:
+                result = {"error": f"Malformed tool arguments: {e}"}
+            except Exception as e:
+                result = {"error": f"Tool execution failed: {e}"}
+
+        raw_results.append(result)
+
+        # Append human-readable summary for the model's next turn
+        formatted = _format_tool_result(tc["function"]["name"], result)
+        messages.append({
+            "role": "tool",
+            "tool_call_id": tc["id"],
+            "content": formatted,
+        })
+
+    return raw_results
+        
 
 async def stream_chat(
     message: str, history: list[dict], config: dict
@@ -81,24 +145,16 @@ async def stream_chat(
     active_tool_defs = [
         t for t in TOOL_DEFINITIONS if t["function"]["name"] in enabled_tools
     ]
-
     messages = _build_messages(message, history, system_prompt)
 
     try:
-        # Always stream from the first call. If the model decides to call a tool,
-        # we accumulate the tool call arguments from the streaming deltas, execute
-        # the tools, append the results, and loop for the next streaming response.
-        # This means text starts flowing to the client immediately on the first
-        # turn that doesn't need tools, with no blocking pre-flight call.
         while True:
             kwargs: dict = {"model": MODEL, "messages": messages, "stream": True}
             if active_tool_defs:
                 kwargs["tools"] = active_tool_defs
 
-            stream = await _get_client().chat.completions.create(**kwargs)
+            stream = await _client.chat.completions.create(**kwargs)
 
-            # Accumulate tool call argument fragments across streaming deltas.
-            # Each tool call is keyed by its index in the delta list.
             tool_calls_acc: dict[int, dict] = {}
             finish_reason = None
 
@@ -120,10 +176,9 @@ async def stream_chat(
                             tool_calls_acc[idx]["id"] = tc_delta.id
                         if tc_delta.function and tc_delta.function.name:
                             name = tc_delta.function.name
-                            # Emit tool call event on first name fragment so the
-                            # UI can show the indicator immediately.
                             if not tool_calls_acc[idx]["name"]:
-                                yield f"data: [TOOL_CALL] {name}\n\n"
+                                # ✅ Named SSE event instead of magic string in data
+                                yield f"event: tool_call\ndata: {name}\n\n"
                             tool_calls_acc[idx]["name"] = name
                         if tc_delta.function and tc_delta.function.arguments:
                             tool_calls_acc[idx]["arguments"] += tc_delta.function.arguments
@@ -131,39 +186,14 @@ async def stream_chat(
             if finish_reason != "tool_calls":
                 break
 
-            # Build the assistant turn with accumulated tool calls and execute them.
-            tool_calls_list = [
-                {
-                    "id": tool_calls_acc[i]["id"],
-                    "type": "function",
-                    "function": {
-                        "name": tool_calls_acc[i]["name"],
-                        "arguments": tool_calls_acc[i]["arguments"],
-                    },
-                }
-                for i in sorted(tool_calls_acc)
-            ]
-            messages.append({"role": "assistant", "tool_calls": tool_calls_list})
+            raw_results = _execute_tool_calls(tool_calls_acc, messages)
+            # Emit each structured tool result so the frontend can render generative UI
+            for result in raw_results:
+                if "error" not in result:
+                    yield f"event: tool_result\ndata: {json.dumps(result)}\n\n"
+            yield "event: tool_done\ndata: \n\n"
 
-            for tc in tool_calls_list:
-                fn = TOOL_FUNCTIONS.get(tc["function"]["name"])
-                if fn is None:
-                    result: dict = {"error": f"Unknown tool: {tc['function']['name']}"}
-                else:
-                    args = json.loads(tc["function"]["arguments"])
-                    result = fn(**args)
-                messages.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": tc["id"],
-                        "content": json.dumps(result),
-                    }
-                )
-
-            # All tools resolved — signal the UI to clear the indicator.
-            yield f"data: [TOOL_DONE]\n\n"
-
-        yield "data: [DONE]\n\n"
+        yield "event: done\ndata: \n\n"  # ✅ named event
 
     except Exception as e:
-        yield f"data: [ERROR] {str(e)}\n\n"
+        yield f"event: error\ndata: {str(e)}\n\n"

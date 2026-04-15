@@ -9,9 +9,11 @@ export default function ReportMistakeButton({ onClick }: Props) {
     <button
       onClick={onClick}
       title="Report a problem with this response"
-      className="opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2 right-2 p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-zinc-700/60"
+      className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-zinc-800 active:scale-95 text-xs"
+      style={{ transition: "color 0.15s ease, background-color 0.15s ease, transform 0.1s ease" }}
     >
-      <Flag size={13} />
+      <Flag size={11} />
+      <span>Report</span>
     </button>
   );
 }

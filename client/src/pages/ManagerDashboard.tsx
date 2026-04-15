@@ -22,7 +22,7 @@ export default function ManagerDashboard() {
     <div className="flex flex-col h-full bg-black">
       <ManagerNav activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <div className="flex-1 overflow-y-auto">
+      <div key={activeTab} className="flex-1 overflow-y-auto animate-fadein">
         <Suspense fallback={<PanelSkeleton />}>
           {activeTab === "config" && <BotConfigPanel />}
           {activeTab === "meta" && <MetaAgentPanel />}

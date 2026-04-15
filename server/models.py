@@ -22,6 +22,7 @@ class Mistake(BaseModel):
     status: MistakeStatus
     fix_diff: FixDiff | None = None
     fix_generating: bool = False
+    conversation_history: list[dict] = []
 
 
 class MistakesStore(BaseModel):
@@ -51,6 +52,7 @@ class ReportMistakeRequest(BaseModel):
     bot_response: str
     complaint_type: ComplaintType
     comment: str = ""
+    conversation_history: list[dict] = []
 
 
 class ApplyFixRequest(BaseModel):
