@@ -1,13 +1,13 @@
 import json
 import os
+from typing import AsyncIterator
 
-from fastapi import HTTPException
 from openai import AsyncOpenAI
 
 from models import BotConfig
-from prompts.meta_prompt import META_SYSTEM_PROMPT
+from prompts.meta_prompt import CONVERSATION_SYSTEM_PROMPT, CONFIG_SYSTEM_PROMPT
 
-MODEL = "gpt-5-nano"
+MODEL = os.environ.get("META_MODEL", "gpt-4o-mini")
 
 _client: AsyncOpenAI | None = None
 
@@ -19,49 +19,72 @@ def _get_client() -> AsyncOpenAI:
     return _client
 
 
-async def generate_config(
-    messages: list, document_content: str | None, current_config: dict
-) -> dict:
-    context_parts: list[str] = []
-
-    context_parts.append(
-        f"Current bot configuration (for reference):\n{json.dumps(current_config, indent=2)}"
-    )
-
+def _build_system_context(document_content: str | None, current_config: dict) -> str:
+    parts = [CONVERSATION_SYSTEM_PROMPT]
+    parts.append(f"Current bot configuration:\n{json.dumps(current_config, indent=2)}")
     if document_content and document_content.strip():
-        context_parts.append(
-            f"Uploaded document content:\n{document_content[:8000]}"
-        )
+        parts.append(f"Uploaded document (for reference):\n{document_content[:8000]}")
+    return "\n\n---\n\n".join(parts)
 
-    if messages:
-        conversation = "\n".join(
-            f"{m.get('role', 'user').upper()}: {m.get('content', '')}"
-            for m in messages
-        )
-        context_parts.append(f"Manager conversation:\n{conversation}")
 
-    prompt_text = "\n\n---\n\n".join(context_parts)
+async def stream_generate(
+    messages: list,
+    document_content: str | None,
+    current_config: dict,
+) -> AsyncIterator[str]:
+    """Stream a conversational reply only. Config generation is a separate explicit action."""
+    client = _get_client()
+    system_ctx = _build_system_context(document_content, current_config)
+
+    chat_messages: list[dict] = [{"role": "system", "content": system_ctx}]
+    for m in messages:
+        role = m.get("role", "user")
+        if role in ("user", "assistant"):
+            chat_messages.append({"role": role, "content": m.get("content", "")})
 
     try:
-        response = await _get_client().chat.completions.create(
+        stream = await client.chat.completions.create(
             model=MODEL,
-            messages=[
-                {"role": "system", "content": META_SYSTEM_PROMPT},
-                {"role": "user", "content": prompt_text},
-            ],
-            response_format={"type": "json_object"},
+            messages=chat_messages,
+            stream=True,
         )
-        raw_json = response.choices[0].message.content or ""
-        parsed = json.loads(raw_json)
-        validated = BotConfig.model_validate(parsed)
-        return validated.model_dump()
-    except json.JSONDecodeError as e:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Meta-agent returned invalid JSON: {str(e)}",
-        )
+        async for chunk in stream:
+            token = chunk.choices[0].delta.content
+            if token:
+                yield f"event: text\ndata: {json.dumps(token)}\n\n"
     except Exception as e:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Meta-agent returned invalid config: {str(e)}",
-        )
+        yield f"event: error\ndata: {json.dumps(str(e))}\n\n"
+        return
+
+    yield "event: done\ndata: \n\n"
+
+
+async def generate_config(
+    messages: list,
+    document_content: str | None,
+    current_config: dict,
+) -> dict:
+    """Generate a bot config JSON from the full conversation history. Called explicitly."""
+    client = _get_client()
+
+    conversation_text = "\n".join(
+        f"{m.get('role', 'user').upper()}: {m.get('content', '')}"
+        for m in messages
+    )
+    context_parts = [f"Current config:\n{json.dumps(current_config, indent=2)}"]
+    if document_content and document_content.strip():
+        context_parts.append(f"Uploaded document:\n{document_content[:8000]}")
+    context_parts.append(f"Conversation:\n{conversation_text}")
+
+    response = await client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": CONFIG_SYSTEM_PROMPT},
+            {"role": "user", "content": "\n\n---\n\n".join(context_parts)},
+        ],
+        response_format={"type": "json_object"},
+    )
+    raw_json = response.choices[0].message.content or "{}"
+    parsed = json.loads(raw_json)
+    validated = BotConfig.model_validate(parsed)
+    return validated.model_dump()

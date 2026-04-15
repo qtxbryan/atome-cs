@@ -185,11 +185,25 @@ export function useChatStream() {
       }
     } catch (err) {
       if (err instanceof Error && err.name !== "AbortError") {
-        setError(err.message);
-        messagesRef.current = messagesRef.current.filter(
-          (m) => m.id !== assistantId
+        const isRateLimit = err.message.includes("429");
+        const errorText = isRateLimit
+          ? "You've reached the rate limit (30 messages/hour). Please wait a while before sending another message."
+          : "Something went wrong. Please try again.";
+
+        // Replace the empty assistant bubble with an inline error message
+        // rather than silently removing it, so the user understands what happened.
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? { ...m, content: errorText, isStreaming: false }
+              : m
+          )
         );
-        setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+        messagesRef.current = messagesRef.current.map((m) =>
+          m.id === assistantId ? { ...m, content: errorText, isStreaming: false } : m
+        );
+        setError(err.message);
+        return;
       }
     } finally {
       setMessages((prev) =>

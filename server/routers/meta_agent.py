@@ -1,6 +1,7 @@
 import io
 
 from fastapi import APIRouter, HTTPException, Request, UploadFile
+from fastapi.responses import StreamingResponse
 from models import BotConfig, MetaAgentRequest
 from services import meta_service
 from storage import config_store
@@ -11,16 +12,32 @@ router = APIRouter()
 
 @router.post("/meta-agent")
 @limiter.limit("20/hour")
-async def meta_agent(request: Request, req: MetaAgentRequest) -> dict:
+async def meta_agent(request: Request, req: MetaAgentRequest) -> StreamingResponse:
+    return StreamingResponse(
+        meta_service.stream_generate(
+            req.messages,
+            req.document_content,
+            req.current_config.model_dump(),
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.post("/meta-agent/generate-config")
+@limiter.limit("20/hour")
+async def generate_config_endpoint(request: Request, req: MetaAgentRequest) -> dict:
     try:
-        result = await meta_service.generate_config(
+        return await meta_service.generate_config(
             req.messages,
             req.document_content,
             req.current_config.model_dump(),
         )
-        return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e))
 
 
 @router.post("/meta-agent/publish")

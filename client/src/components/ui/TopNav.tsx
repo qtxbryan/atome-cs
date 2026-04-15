@@ -1,11 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
+import AtomeBrand from "@/assets/Atome_Brand.svg";
 
 export default function TopNav() {
   const { pathname } = useLocation();
 
   return (
     <nav className="flex items-center justify-between px-4 py-2.5 bg-black border-b border-zinc-900">
-      <span className="text-atome font-black text-lg tracking-tight">atome</span>
+      <img src={AtomeBrand} alt="Atome" className="h-5 w-auto" />
 
       <div className="flex items-center gap-1">
         <Link

@@ -19,7 +19,8 @@ function buildConversationHistory(
 ): ConversationTurn[] {
   return messages.slice(0, upToIndex + 1).map((m) => ({
     role: m.role as "user" | "assistant",
-    content: typeof m.content === "string" ? m.content : "[Generative response]",
+    content:
+      typeof m.content === "string" ? m.content : "[Generative response]",
   }));
 }
 
@@ -32,10 +33,13 @@ export default function CustomerChat() {
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
-  const handleReport = useCallback((botMessage: string, history: ConversationTurn[]) => {
-    setReportTarget({ botMessage, history });
-    setShowConfirmation(false);
-  }, []);
+  const handleReport = useCallback(
+    (botMessage: string, history: ConversationTurn[]) => {
+      setReportTarget({ botMessage, history });
+      setShowConfirmation(false);
+    },
+    []
+  );
 
   const handleReportClose = useCallback(() => setReportTarget(null), []);
 

@@ -1,8 +1,10 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import { Tabs } from "@heroui/react";
 import { useAuth } from "@/context/AuthContext";
+import type { MetaAgentMessage } from "@/api/metaAgentApi";
+import type { BotConfig } from "@/types/BotConfigTypes";
 
 const BotConfigPanel = lazy(() => import("@/components/manager/BotConfigPanel"));
 const MetaAgentPanel = lazy(() => import("@/components/manager/MetaAgentPanel"));
@@ -21,6 +23,10 @@ function PanelSkeleton() {
 export default function ManagerDashboard() {
   const { logout } = useAuth();
   const navigate = useNavigate();
+
+  // Lifted here so state persists across tab switches
+  const [metaMessages, setMetaMessages] = useState<MetaAgentMessage[]>([]);
+  const [metaGeneratedConfig, setMetaGeneratedConfig] = useState<BotConfig | null>(null);
 
   function handleLogout() {
     logout();
@@ -78,18 +84,23 @@ export default function ManagerDashboard() {
         </div>
 
         {/* Tab panels */}
-        <div className="flex-1 overflow-y-auto animate-fadein">
-          <Tabs.Panel id="config">
+        <div className="flex-1 min-h-0 overflow-hidden animate-fadein">
+          <Tabs.Panel id="config" className="h-full overflow-y-auto">
             <Suspense fallback={<PanelSkeleton />}>
               <BotConfigPanel />
             </Suspense>
           </Tabs.Panel>
-          <Tabs.Panel id="meta">
+          <Tabs.Panel id="meta" className="h-full overflow-hidden">
             <Suspense fallback={<PanelSkeleton />}>
-              <MetaAgentPanel />
+              <MetaAgentPanel
+                messages={metaMessages}
+                setMessages={setMetaMessages}
+                generatedConfig={metaGeneratedConfig}
+                setGeneratedConfig={setMetaGeneratedConfig}
+              />
             </Suspense>
           </Tabs.Panel>
-          <Tabs.Panel id="mistakes">
+          <Tabs.Panel id="mistakes" className="h-full overflow-y-auto">
             <Suspense fallback={<PanelSkeleton />}>
               <MistakeDashboard />
             </Suspense>
