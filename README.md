@@ -5,7 +5,7 @@ An AI-powered customer service chatbot for Atome Card, with a meta-agent managem
 - **Customer** — chats with the bot at `/`
 - **Manager** — configures the bot at `/manager` (password: `atome2026`)
 
-> **Live demo:** _link will be added before submission_
+> **Live demo:** https://atome-cs.vercel.app/
 
 ---
 
