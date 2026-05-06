@@ -3,6 +3,7 @@ import { Send, Trash2 } from "lucide-react";
 import type { BotConfig } from "@/types/BotConfigTypes";
 import type { MetaAgentMessage } from "@/api/metaAgentApi";
 import { streamMetaMessage } from "@/api/metaAgentApi";
+import { MessageRole } from "@/types/ChatTypes";
 
 // Detect explicit config-generation intent from the user's message
 function hasConfigGenIntent(message: string): boolean {
@@ -47,8 +48,8 @@ export default function MetaAgentChat({
     if (!trimmed || loading) return;
 
     const wantsConfig = hasConfigGenIntent(trimmed);
-    const userMessage: MetaAgentMessage = { role: "user", content: trimmed };
-    const assistantPlaceholder: MetaAgentMessage = { role: "assistant", content: "" };
+    const userMessage: MetaAgentMessage = { role: MessageRole.User, content: trimmed };
+    const assistantPlaceholder: MetaAgentMessage = { role: MessageRole.Assistant, content: "" };
 
     const messagesWithUser = [...messages, userMessage];
     setMessages([...messagesWithUser, assistantPlaceholder]);
@@ -99,11 +100,11 @@ export default function MetaAgentChat({
         {messages.map((m, i) => (
           <div
             key={i}
-            className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+            className={`flex ${m.role === MessageRole.User ? "justify-end" : "justify-start"}`}
           >
             <div
               className={`max-w-[85%] rounded-xl px-3 py-2.5 text-sm leading-relaxed ${
-                m.role === "user"
+                m.role === MessageRole.User
                   ? "bg-atome text-black font-medium"
                   : "bg-zinc-800 text-zinc-200"
               }`}

@@ -1,8 +1,8 @@
-import json
 import logging
 import os
 
 from openai import AsyncOpenAI
+from pydantic import BaseModel
 
 from prompts.fix_prompt import FIX_SYSTEM_PROMPT
 from storage import config_store, mistakes_store
@@ -12,6 +12,13 @@ MODEL = "gpt-5-nano"
 logger = logging.getLogger(__name__)
 
 _client: AsyncOpenAI | None = None
+
+
+class FixSuggestion(BaseModel):
+    guideline_index: int
+    before: str | None = None
+    after: str
+    explanation: str | None = None
 
 
 def _get_client() -> AsyncOpenAI:
@@ -63,27 +70,31 @@ async def generate_fix(mistake_id: str) -> None:
             f"Current guidelines (zero-based index):\n{numbered_guidelines}"
         )
 
-        response = await _get_client().chat.completions.create(
+        response = await _get_client().responses.parse(
             model=MODEL,
-            messages=[
-                {"role": "system", "content": FIX_SYSTEM_PROMPT},
-                {"role": "user", "content": prompt_text},
+            instructions=FIX_SYSTEM_PROMPT,
+            input=[
+                {
+                    "role": "user",
+                    "content": prompt_text,
+                }
             ],
-            response_format={"type": "json_object"},
+            text_format=FixSuggestion,
         )
 
-        raw_json = response.choices[0].message.content or ""
-        parsed = json.loads(raw_json)
+        parsed = response.output_parsed
+        if not isinstance(parsed, FixSuggestion):
+            raise ValueError("Model did not return a valid fix suggestion.")
 
-        guideline_index = int(parsed["guideline_index"])
+        guideline_index = int(parsed.guideline_index)
         if not (0 <= guideline_index < len(guidelines)):
             guideline_index = 0
 
         fix_diff = {
             "guideline_index": guideline_index,
-            "before": parsed.get("before", guidelines[guideline_index]),
-            "after": parsed["after"],
-            "explanation": parsed.get("explanation", ""),
+            "before": parsed.before or guidelines[guideline_index],
+            "after": parsed.after,
+            "explanation": parsed.explanation or "",
         }
 
         mistakes_store.update_mistake_in_store(

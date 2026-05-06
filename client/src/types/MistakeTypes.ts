@@ -1,3 +1,5 @@
+import { MessageRole } from "@/types/ChatTypes";
+
 export interface FixDiff {
   guideline_index: number;
   before: string;
@@ -5,15 +7,21 @@ export interface FixDiff {
   explanation: string;
 }
 
-export type MistakeStatus = "pending_review" | "applied" | "dismissed";
-export type ComplaintType =
-  | "wrong_info"
-  | "didnt_understand"
-  | "missing_info"
-  | "other";
+export enum MistakeStatus {
+  PendingReview = "pending_review",
+  Applied = "applied",
+  Dismissed = "dismissed",
+}
+
+export enum ComplaintType {
+  WrongInfo = "wrong_info",
+  DidntUnderstand = "didnt_understand",
+  MissingInfo = "missing_info",
+  Other = "other",
+}
 
 export interface ConversationTurn {
-  role: "user" | "assistant";
+  role: MessageRole;
   content: string;
 }
 

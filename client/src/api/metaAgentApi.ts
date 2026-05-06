@@ -1,9 +1,10 @@
 import type { BotConfig } from "@/types/BotConfigTypes";
+import { MessageRole } from "@/types/ChatTypes";
 
 const BASE = import.meta.env.VITE_API_URL ?? "";
 
 export interface MetaAgentMessage {
-  role: "user" | "assistant";
+  role: MessageRole;
   content: string;
 }
 

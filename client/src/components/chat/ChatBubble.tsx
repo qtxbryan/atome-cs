@@ -1,6 +1,6 @@
 import { memo, useState } from "react";
 import { Copy, Check } from "lucide-react";
-import type { ChatMessage } from "@/types/ChatTypes";
+import { MessageRole, type ChatMessage } from "@/types/ChatTypes";
 import type { ConversationTurn } from "@/types/MistakeTypes";
 import AssistantBubble from "./AssistantBubble";
 
@@ -57,7 +57,7 @@ function UserBubble({ content }: { content: string }) {
 }
 
 const ChatBubble = memo(function ChatBubble({ message, conversationHistory, onReport }: Props) {
-  if (message.role === "user") {
+  if (message.role === MessageRole.User) {
     return (
       <UserBubble
         content={typeof message.content === "string" ? message.content : ""}

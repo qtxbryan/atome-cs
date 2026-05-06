@@ -1,38 +1,21 @@
 import { useState, useCallback, useRef } from "react";
 import { streamChat } from "@/api/chatApi";
-import type { ChatMessage, MessageRole, CardStatusData, TransactionStatusData } from "@/types/ChatTypes";
-import { isCardStatusData, isTransactionStatusData } from "@/types/ChatTypes";
-
-function formatToolLabel(name: string): string {
-  const label = name.replace(/_/g, " ");
-  return label.charAt(0).toUpperCase() + label.slice(1) + "…";
-}
-
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
-/** Converts structured generative content to a meaningful text for LLM history. */
-function contentToHistoryText(content: ChatMessage["content"]): string {
-  if (typeof content === "string") return content;
-  if (isCardStatusData(content)) {
-    return (
-      `Card application ${content.application_id}: status is ${content.status}, ` +
-      `applied on ${content.applied_date}, estimated ${content.estimated_days} day(s) remaining.`
-    );
-  }
-  if (isTransactionStatusData(content)) {
-    const base =
-      `Transaction ${content.transaction_id}: status is ${content.status}, ` +
-      `amount ${content.currency} ${content.amount}, merchant ${content.merchant}, date ${content.date}`;
-    return content.failure_reason ? `${base}, reason: ${content.failure_reason}.` : `${base}.`;
-  }
-  return "";
-}
+import {
+  MessageRole,
+  type ChatMessage,
+  type CardStatusData,
+  type TransactionStatusData,
+} from "@/types/ChatTypes";
+import {
+  formatToolLabel,
+  generateId,
+  contentToHistoryText,
+} from "@/utils/chat";
 
 /** Returns a brief intro sentence shown above the generative widget. */
 function getWidgetIntro(data: CardStatusData | TransactionStatusData): string {
-  if (data.type === "card_status") return "Here is the status for your card application:";
+  if (data.type === "card_status")
+    return "Here is the status for your card application:";
   return "Here are the details for your transaction:";
 }
 
@@ -51,14 +34,14 @@ export function useChatStream() {
 
     const userMessage: ChatMessage = {
       id: generateId(),
-      role: "user",
+      role: MessageRole.User,
       content: text.trim(),
     };
 
     const assistantId = generateId();
     const assistantMessage: ChatMessage = {
       id: assistantId,
-      role: "assistant",
+      role: MessageRole.Assistant,
       content: "",
       isStreaming: true,
     };
@@ -69,7 +52,11 @@ export function useChatStream() {
       content: contentToHistoryText(m.content),
     }));
 
-    messagesRef.current = [...messagesRef.current, userMessage, assistantMessage];
+    messagesRef.current = [
+      ...messagesRef.current,
+      userMessage,
+      assistantMessage,
+    ];
     setMessages((prev) => [...prev, userMessage, assistantMessage]);
     isStreamingRef.current = true;
     setIsStreaming(true);
@@ -109,8 +96,13 @@ export function useChatStream() {
 
             if (currentEvent === "tool_result") {
               try {
-                const data = JSON.parse(payload) as CardStatusData | TransactionStatusData;
-                if (data.type === "card_status" || data.type === "transaction_status") {
+                const data = JSON.parse(payload) as
+                  | CardStatusData
+                  | TransactionStatusData;
+                if (
+                  data.type === "card_status" ||
+                  data.type === "transaction_status"
+                ) {
                   const intro = getWidgetIntro(data);
                   setMessages((prev) =>
                     prev.map((m) =>
@@ -200,7 +192,9 @@ export function useChatStream() {
           )
         );
         messagesRef.current = messagesRef.current.map((m) =>
-          m.id === assistantId ? { ...m, content: errorText, isStreaming: false } : m
+          m.id === assistantId
+            ? { ...m, content: errorText, isStreaming: false }
+            : m
         );
         setError(err.message);
         return;

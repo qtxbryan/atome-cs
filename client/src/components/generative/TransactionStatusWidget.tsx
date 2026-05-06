@@ -1,10 +1,10 @@
-import type { TransactionStatusData } from "@/types/ChatTypes";
+import { TransactionStatus, type TransactionStatusData } from "@/types/ChatTypes";
 
-const statusColors: Record<string, string> = {
-  success: "bg-green-700 text-green-100",
-  failed: "bg-red-700 text-red-100",
-  processing: "bg-yellow-700 text-yellow-100",
-  refunded: "bg-blue-700 text-blue-100",
+const statusColors: Record<TransactionStatus, string> = {
+  [TransactionStatus.Success]: "bg-green-700 text-green-100",
+  [TransactionStatus.Failed]: "bg-red-700 text-red-100",
+  [TransactionStatus.Processing]: "bg-yellow-700 text-yellow-100",
+  [TransactionStatus.Refunded]: "bg-blue-700 text-blue-100",
 };
 
 const failureLabels: Record<string, string> = {

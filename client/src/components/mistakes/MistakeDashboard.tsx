@@ -4,21 +4,21 @@ import { useMistakes } from "@/context/MistakesContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import MistakeCard from "./MistakeCard";
 import ResolvedMistakes from "./ResolvedMistakes";
-import type { Mistake } from "@/types/MistakeTypes";
+import { type Mistake, ComplaintType } from "@/types/MistakeTypes";
 
-const COMPLAINT_LABELS: Record<string, string> = {
-  wrong_info: "Wrong info",
-  didnt_understand: "Didn't understand",
-  missing_info: "Missing info",
-  other: "Other",
+const COMPLAINT_LABELS: Record<ComplaintType, string> = {
+  [ComplaintType.WrongInfo]: "Wrong info",
+  [ComplaintType.DidntUnderstand]: "Didn't understand",
+  [ComplaintType.MissingInfo]: "Missing info",
+  [ComplaintType.Other]: "Other",
 };
 
-const FILTER_OPTIONS = [
+const FILTER_OPTIONS: { id: ComplaintType | "all"; label: string }[] = [
   { id: "all", label: "All" },
-  { id: "wrong_info", label: "Wrong info" },
-  { id: "didnt_understand", label: "Didn't understand" },
-  { id: "missing_info", label: "Missing info" },
-  { id: "other", label: "Other" },
+  { id: ComplaintType.WrongInfo, label: "Wrong info" },
+  { id: ComplaintType.DidntUnderstand, label: "Didn't understand" },
+  { id: ComplaintType.MissingInfo, label: "Missing info" },
+  { id: ComplaintType.Other, label: "Other" },
 ];
 
 function Skeleton() {
@@ -48,7 +48,7 @@ export default function MistakeDashboard() {
   const { mistakes, loading, error, fetchMistakes } = useMistakes();
 
   const [searchRaw, setSearchRaw] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState<ComplaintType | "all">("all");
   const search = useDebounce(searchRaw, 300);
 
   useEffect(() => {

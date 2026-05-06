@@ -1,12 +1,12 @@
 import { useState } from "react";
-import type { Mistake } from "@/types/MistakeTypes";
+import { type Mistake, MistakeStatus, ComplaintType } from "@/types/MistakeTypes";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
-const COMPLAINT_LABELS: Record<string, string> = {
-  wrong_info: "Wrong info",
-  didnt_understand: "Didn't understand",
-  missing_info: "Missing info",
-  other: "Other",
+const COMPLAINT_LABELS: Record<ComplaintType, string> = {
+  [ComplaintType.WrongInfo]: "Wrong info",
+  [ComplaintType.DidntUnderstand]: "Didn't understand",
+  [ComplaintType.MissingInfo]: "Missing info",
+  [ComplaintType.Other]: "Other",
 };
 
 interface RowProps {
@@ -16,7 +16,7 @@ interface RowProps {
 function ResolvedRow({ mistake }: RowProps) {
   const [expanded, setExpanded] = useState(false);
 
-  const isApplied = mistake.status === "applied";
+  const isApplied = mistake.status === MistakeStatus.Applied;
   const timestamp = new Date(mistake.timestamp).toLocaleString();
 
   return (

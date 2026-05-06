@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMistakes } from "@/context/MistakesContext";
-import type { ComplaintType, ConversationTurn } from "@/types/MistakeTypes";
+import { ComplaintType, type ConversationTurn } from "@/types/MistakeTypes";
+import { MessageRole } from "@/types/ChatTypes";
 
 interface Props {
   botMessage: string;
@@ -11,10 +12,10 @@ interface Props {
 }
 
 const COMPLAINT_OPTIONS: { value: ComplaintType; label: string }[] = [
-  { value: "wrong_info", label: "Wrong information" },
-  { value: "didnt_understand", label: "Didn't understand my question" },
-  { value: "missing_info", label: "Missing information" },
-  { value: "other", label: "Other" },
+  { value: ComplaintType.WrongInfo, label: "Wrong information" },
+  { value: ComplaintType.DidntUnderstand, label: "Didn't understand my question" },
+  { value: ComplaintType.MissingInfo, label: "Missing information" },
+  { value: ComplaintType.Other, label: "Other" },
 ];
 
 export default function ReportMistakeModal({
@@ -25,7 +26,7 @@ export default function ReportMistakeModal({
   onSubmitted,
 }: Props) {
   const { reportMistake } = useMistakes();
-  const [complaintType, setComplaintType] = useState<ComplaintType>("wrong_info");
+  const [complaintType, setComplaintType] = useState<ComplaintType>(ComplaintType.WrongInfo);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +34,7 @@ export default function ReportMistakeModal({
   if (!isOpen) return null;
 
   const lastUserMessage =
-    [...conversationHistory].reverse().find((m) => m.role === "user")?.content ?? "";
+    [...conversationHistory].reverse().find((m) => m.role === MessageRole.User)?.content ?? "";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

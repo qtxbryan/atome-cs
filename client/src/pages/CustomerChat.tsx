@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useChatStream } from "@/hooks/useChatStream";
 import type { ConversationTurn } from "@/types/MistakeTypes";
+import { MessageRole } from "@/types/ChatTypes";
 import ChatHeader from "@/components/chat/ChatHeader";
 import ChatBubble from "@/components/chat/ChatBubble";
 import ChatInput from "@/components/chat/ChatInput";
@@ -18,7 +19,7 @@ function buildConversationHistory(
   upToIndex: number
 ): ConversationTurn[] {
   return messages.slice(0, upToIndex + 1).map((m) => ({
-    role: m.role as "user" | "assistant",
+    role: m.role as MessageRole,
     content:
       typeof m.content === "string" ? m.content : "[Generative response]",
   }));

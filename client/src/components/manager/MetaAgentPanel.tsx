@@ -27,7 +27,7 @@ function ConfigSkeleton() {
   );
 }
 import { toast } from "sonner";
-import type { BotConfig } from "@/types/BotConfigTypes";
+import { ToolName, type BotConfig } from "@/types/BotConfigTypes";
 import type { MetaAgentMessage } from "@/api/metaAgentApi";
 import { useBotConfig } from "@/context/BotConfigContext";
 import { generateConfig, publishConfig } from "@/api/metaAgentApi";
@@ -41,7 +41,7 @@ const DEFAULT_CONFIG: BotConfig = {
   kb_pages_scraped: 0,
   system_prompt: "",
   guidelines: [],
-  tools_enabled: ["getCardStatus", "getTransactionStatus"],
+  tools_enabled: [ToolName.GetCardStatus, ToolName.GetTransactionStatus],
 };
 
 interface Props {

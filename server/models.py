@@ -41,10 +41,13 @@ class BotConfig(BaseModel):
     guidelines: list[str] = []
     tools_enabled: list[str] = ["getCardStatus", "getTransactionStatus"]
 
+class ChatHistoryMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
 
 class ChatRequest(BaseModel):
     message: str
-    history: list[dict]
+    history: list[ChatHistoryMessage]
 
 
 class ReportMistakeRequest(BaseModel):

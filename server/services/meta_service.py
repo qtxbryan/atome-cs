@@ -27,6 +27,21 @@ def _build_system_context(document_content: str | None, current_config: dict) ->
     return "\n\n---\n\n".join(parts)
 
 
+def _build_input_messages(messages: list) -> list[dict]:
+    input_messages: list[dict] = []
+    for m in messages:
+        role = m.get("role", "user")
+        if role in ("user", "assistant"):
+            input_messages.append({"role": role, "content": m.get("content", "")})
+    return input_messages
+
+
+def _require_parsed_output(response: BotConfig | object, fallback: str) -> BotConfig:
+    if isinstance(response, BotConfig):
+        return response
+    raise ValueError(fallback)
+
+
 async def stream_generate(
     messages: list,
     document_content: str | None,
@@ -35,23 +50,18 @@ async def stream_generate(
     """Stream a conversational reply only. Config generation is a separate explicit action."""
     client = _get_client()
     system_ctx = _build_system_context(document_content, current_config)
-
-    chat_messages: list[dict] = [{"role": "system", "content": system_ctx}]
-    for m in messages:
-        role = m.get("role", "user")
-        if role in ("user", "assistant"):
-            chat_messages.append({"role": role, "content": m.get("content", "")})
+    input_messages = _build_input_messages(messages)
 
     try:
-        stream = await client.chat.completions.create(
+        stream = await client.responses.create(
             model=MODEL,
-            messages=chat_messages,
+            instructions=system_ctx,
+            input=input_messages,
             stream=True,
         )
-        async for chunk in stream:
-            token = chunk.choices[0].delta.content
-            if token:
-                yield f"event: text\ndata: {json.dumps(token)}\n\n"
+        async for event in stream:
+            if event.type == "response.output_text.delta" and event.delta:
+                yield f"event: text\ndata: {json.dumps(event.delta)}\n\n"
     except Exception as e:
         yield f"event: error\ndata: {json.dumps(str(e))}\n\n"
         return
@@ -76,15 +86,19 @@ async def generate_config(
         context_parts.append(f"Uploaded document:\n{document_content[:8000]}")
     context_parts.append(f"Conversation:\n{conversation_text}")
 
-    response = await client.chat.completions.create(
+    response = await client.responses.parse(
         model=MODEL,
-        messages=[
-            {"role": "system", "content": CONFIG_SYSTEM_PROMPT},
-            {"role": "user", "content": "\n\n---\n\n".join(context_parts)},
+        instructions=CONFIG_SYSTEM_PROMPT,
+        input=[
+            {
+                "role": "user",
+                "content": "\n\n---\n\n".join(context_parts),
+            }
         ],
-        response_format={"type": "json_object"},
+        text_format=BotConfig,
     )
-    raw_json = response.choices[0].message.content or "{}"
-    parsed = json.loads(raw_json)
-    validated = BotConfig.model_validate(parsed)
-    return validated.model_dump()
+    parsed = _require_parsed_output(
+        response.output_parsed,
+        "Model did not return a valid bot configuration.",
+    )
+    return parsed.model_dump()

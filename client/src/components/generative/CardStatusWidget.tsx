@@ -1,17 +1,17 @@
-import type { CardStatusData } from "@/types/ChatTypes";
+import { CardApplicationStatus, type CardStatusData } from "@/types/ChatTypes";
 
-const statusColors: Record<string, string> = {
-  pending: "bg-zinc-600 text-zinc-200",
-  under_review: "bg-blue-700 text-blue-100",
-  approved: "bg-green-700 text-green-100",
-  rejected: "bg-red-700 text-red-100",
+const statusColors: Record<CardApplicationStatus, string> = {
+  [CardApplicationStatus.Pending]: "bg-zinc-600 text-zinc-200",
+  [CardApplicationStatus.UnderReview]: "bg-blue-700 text-blue-100",
+  [CardApplicationStatus.Approved]: "bg-green-700 text-green-100",
+  [CardApplicationStatus.Rejected]: "bg-red-700 text-red-100",
 };
 
-const statusLabels: Record<string, string> = {
-  pending: "Pending",
-  under_review: "Under Review",
-  approved: "Approved",
-  rejected: "Rejected",
+const statusLabels: Record<CardApplicationStatus, string> = {
+  [CardApplicationStatus.Pending]: "Pending",
+  [CardApplicationStatus.UnderReview]: "Under Review",
+  [CardApplicationStatus.Approved]: "Approved",
+  [CardApplicationStatus.Rejected]: "Rejected",
 };
 
 interface Props {
@@ -43,7 +43,7 @@ export default function CardStatusWidget({ data }: Props) {
           <span className="text-zinc-400">Applied Date</span>
           <span className="text-white">{data.applied_date}</span>
         </div>
-        {data.status !== "approved" && data.status !== "rejected" && (
+        {data.status !== CardApplicationStatus.Approved && data.status !== CardApplicationStatus.Rejected && (
           <div className="flex justify-between">
             <span className="text-zinc-400">Estimated Days</span>
             <span className="text-white">{data.estimated_days} days</span>

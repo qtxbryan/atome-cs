@@ -1,5 +1,5 @@
 import { Plus, Trash2 } from "lucide-react";
-import type { BotConfig } from "@/types/BotConfigTypes";
+import { ToolName, type BotConfig } from "@/types/BotConfigTypes";
 
 interface Props {
   config: BotConfig;
@@ -24,7 +24,7 @@ export default function GeneratedConfigPreview({ config, onChange }: Props) {
     onChange({ ...config, guidelines: [...config.guidelines, ""] });
   }
 
-  function toggleTool(tool: string) {
+  function toggleTool(tool: ToolName) {
     const enabled = config.tools_enabled.includes(tool);
     onChange({
       ...config,
@@ -98,7 +98,7 @@ export default function GeneratedConfigPreview({ config, onChange }: Props) {
           Enabled Tools
         </p>
         <div className="space-y-1.5">
-          {["getCardStatus", "getTransactionStatus"].map((tool) => (
+          {Object.values(ToolName).map((tool) => (
             <label key={tool} className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"

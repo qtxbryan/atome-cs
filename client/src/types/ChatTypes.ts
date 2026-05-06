@@ -1,9 +1,26 @@
-export type MessageRole = "user" | "assistant";
+export enum MessageRole {
+  User = "user",
+  Assistant = "assistant",
+}
+
+export enum CardApplicationStatus {
+  Pending = "pending",
+  UnderReview = "under_review",
+  Approved = "approved",
+  Rejected = "rejected",
+}
+
+export enum TransactionStatus {
+  Success = "success",
+  Failed = "failed",
+  Processing = "processing",
+  Refunded = "refunded",
+}
 
 export interface CardStatusData {
   type: "card_status";
   application_id: string;
-  status: "pending" | "under_review" | "approved" | "rejected";
+  status: CardApplicationStatus;
   applied_date: string;
   estimated_days: number;
 }
@@ -11,7 +28,7 @@ export interface CardStatusData {
 export interface TransactionStatusData {
   type: "transaction_status";
   transaction_id: string;
-  status: "success" | "failed" | "processing" | "refunded";
+  status: TransactionStatus;
   amount: number;
   currency: string;
   merchant: string;

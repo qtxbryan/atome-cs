@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import type { Mistake } from "@/types/MistakeTypes";
+import { type Mistake, ComplaintType } from "@/types/MistakeTypes";
+import { MessageRole } from "@/types/ChatTypes";
 import { useMistakes } from "@/context/MistakesContext";
 import { useMistakePolling } from "@/hooks/useMistakePolling";
 import FixDiffView from "./FixDiffView";
 
-const COMPLAINT_LABELS: Record<string, string> = {
-  wrong_info: "Wrong information",
-  didnt_understand: "Didn't understand",
-  missing_info: "Missing information",
-  other: "Other",
+const COMPLAINT_LABELS: Record<ComplaintType, string> = {
+  [ComplaintType.WrongInfo]: "Wrong information",
+  [ComplaintType.DidntUnderstand]: "Didn't understand",
+  [ComplaintType.MissingInfo]: "Missing information",
+  [ComplaintType.Other]: "Other",
 };
 
 interface Props {
@@ -107,13 +108,13 @@ export default function MistakeCard({ mistake }: Props) {
                   <div
                     key={i}
                     className={`rounded-lg px-2.5 py-1.5 text-xs ${
-                      turn.role === "user"
+                      turn.role === MessageRole.User
                         ? "bg-atome/10 text-atome border border-atome/20 ml-4"
                         : "bg-zinc-800/50 text-zinc-300 border border-zinc-700/50 mr-4"
                     }`}
                   >
                     <span className="font-semibold uppercase text-[9px] tracking-wider opacity-60 block mb-0.5">
-                      {turn.role === "user" ? "Customer" : "Bot"}
+                      {turn.role === MessageRole.User ? "Customer" : "Bot"}
                     </span>
                     {turn.content}
                   </div>
