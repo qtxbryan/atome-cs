@@ -60,7 +60,7 @@ Customer ─────────┤  POST /api/chat (SSE stream)         │
                   │   └─ bot_service                     │
                   │       ├─ reads config.json           │
                   │       ├─ reads kb_content.md         │
-                  │       └─ OpenAI (streaming + tools)  │
+                  │       └─ OpenAI Responses API (streaming + tools)  │
                   │                                      │
 Manager  ─────────┤  GET/PUT /api/config                 │
                   │   └─ config_store → config.json      │
@@ -121,7 +121,7 @@ flowchart TD
 | Frontend | React 19 + TypeScript, Vite, Tailwind CSS v4 |
 | Component libraries | HeroUI v3, shadcn/ui |
 | Backend | Python 3.11 + FastAPI, async/await, Pydantic |
-| LLM | OpenAI API (`gpt-5-mini`) |
+| LLM | OpenAI Responses API (`gpt-5-nano` for all services; overridable via `CHAT_MODEL` / `META_MODEL` env vars) |
 | Streaming | Server-Sent Events (`text/event-stream`) with named events |
 | Persistence | JSON files + markdown (no database) |
 | Deployment | Docker + docker-compose, nginx (proxy buffering off for SSE) |
@@ -210,4 +210,4 @@ Human-driven decisions included: feature prioritisation and scope, all product d
 
 - `server/data/` and all its contents (`config.json`, `mistakes.json`, `kb_content.md`) are **auto-created on first run** — no manual data setup is needed after cloning
 - `data/` is gitignored — runtime state is not committed to the repository
-- All LLM calls use `gpt-5o-mini`. Set `OPENAI_API_KEY` in `.env` before running
+- LLM calls use the OpenAI **Responses API** with `gpt-5-nano` across all services. The chat and meta-agent models can be overridden via `CHAT_MODEL` and `META_MODEL` env vars. Set `OPENAI_API_KEY` in `.env` before running

@@ -8,7 +8,7 @@ from prompts.bot_prompt import build_system_prompt
 from models import ChatHistoryMessage
 from services.mock_tools import getCardStatus, getTransactionStatus
 
-MODEL = os.environ.get("CHAT_MODEL", "gpt-4o-mini")
+MODEL = os.environ.get("CHAT_MODEL", "gpt-5-nano")
 
 _client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
 

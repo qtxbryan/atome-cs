@@ -1,3 +1,5 @@
+export type ChatFormatMode = "history" | "plain";
+
 export enum MessageRole {
   User = "user",
   Assistant = "assistant",

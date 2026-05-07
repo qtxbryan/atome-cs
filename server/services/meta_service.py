@@ -7,7 +7,7 @@ from openai import AsyncOpenAI
 from models import BotConfig
 from prompts.meta_prompt import CONVERSATION_SYSTEM_PROMPT, CONFIG_SYSTEM_PROMPT
 
-MODEL = os.environ.get("META_MODEL", "gpt-4o-mini")
+MODEL = os.environ.get("META_MODEL", "gpt-5-nano")
 
 _client: AsyncOpenAI | None = None
 
